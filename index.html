@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/takey/Downloads/index_4.html -->
+<!-- saved from url=(0045)file:///C:/Users/takey/Downloads/index_5.html -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -204,59 +204,42 @@ const BOOKS=[
 const AVATAR_BG=['#E1F5EE','#E6F1FB','#FAEEDA','#FBEAF0','#EAF3DE','#EEEDFE'];
 const AVATAR_TX=['#085041','#0C447C','#633806','#72243E','#27500A','#3C3489'];
 
-let sb, myName='', myCode='', myId='', bookTab='all', activeBook=null, readData={};
-const SK='bible_sb_v1';
+let sb=null, myName='', myCode='', myId='', bookTab='all', activeBook=null, readData={};
+const SK='bible_sb_v2';
 
+// Supabase初期化
 function initSupabase(){
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-}
-
-function makeId(){return crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36);}
-function makeCode(){return Math.random().toString(36).slice(2,8).toUpperCase();}
-function colorIdx(name){let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))%AVATAR_BG.length;return h;}
-
-function showAlert(msg,type){const el=document.getElementById('join-alert');el.textContent=msg;el.className='alert '+(type||'error');el.style.display='block';}
-
-async function joinOrCreate(){
-  const name=document.getElementById("inp-name").value.trim();
-  const code=document.getElementById("inp-code").value.trim().toUpperCase();
-  if(!name){showAlert("名前を入力してください。");return;}
-  if(code&&code.length!==6){showAlert("グループコードは6文字です。");return;}
-  const btn=document.getElementById("join-btn");
-  btn.disabled=true;btn.textContent="処理中...";
   try{
-    if(code){
-      const res=await sb.from("groups").select("code").eq("code",code);
-      if(res.error)throw new Error("グループ検索エラー: "+res.error.message);
-      if(!res.data||res.data.length===0){showAlert("グループが見つかりません。コードを確認してください。");btn.disabled=false;btn.textContent="参加 / 新規作成";return;}
-      myCode=code;
-    } else {
-      myCode=makeCode();
-      const res=await sb.from("groups").insert({code:myCode});
-      if(res.error)throw new Error("グループ作成エラー: "+res.error.message);
-    }
-    myName=name;
-    myId=btoa(unescape(encodeURIComponent(myName+"_"+myCode))).replace(/[^a-zA-Z0-9]/g,"").slice(0,36);
-    readData={};
-    initRead();
-    const existing=await sb.from("members").select("read_data").eq("id",myId);
-    if(!existing.error&&existing.data&&existing.data.length>0&&existing.data[0].read_data){
-      readData=existing.data[0].read_data;
-    }
-    const upsertRes=await sb.from("members").upsert({id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()});
-    if(upsertRes.error)throw new Error("メンバー保存エラー: "+upsertRes.error.message);
-    localStorage.setItem(SK,JSON.stringify({name:myName,code:myCode,id:myId,read:readData}));
-    enterApp();
-  }catch(e){showAlert("エラー: "+e.message);}
-  btn.disabled=false;btn.textContent="参加 / 新規作成";
+    sb=supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }catch(e){
+    showAlert('Supabase初期化エラー: '+e.message);
+  }
 }
 
-function initRead(){BOOKS.forEach(b=>{if(!readData[b.n])readData[b.n]=new Array(b.c).fill(false);});}
-function totalRead(){return BOOKS.reduce((a,b)=>a+(readData[b.n]||[]).filter(Boolean).length,0);}
+// 名前+コードから毎回同じIDを生成する
+function makeStableId(name, code){
+  var str=name+'_'+code;
+  var hash=0;
+  for(var i=0;i<str.length;i++){
+    hash=((hash<<5)-hash)+str.charCodeAt(i);
+    hash=hash&hash;
+  }
+  var h=Math.abs(hash).toString(36);
+  var l=str.length.toString(36);
+  var s=0;
+  for(var i=0;i<str.length;i++) s+=str.charCodeAt(i);
+  return (h+l+s.toString(36)).slice(0,36);
+}
+
+function makeCode(){return Math.random().toString(36).slice(2,8).toUpperCase();}
+function colorIdx(name){var h=0;for(var i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))%AVATAR_BG.length;return h;}
+function showAlert(msg,type){var el=document.getElementById('join-alert');el.textContent=msg;el.className='alert '+(type||'error');el.style.display='block';}
+function initRead(){BOOKS.forEach(function(b){if(!readData[b.n])readData[b.n]=new Array(b.c).fill(false);});}
+function totalRead(){return BOOKS.reduce(function(a,b){return a+(readData[b.n]||[]).filter(Boolean).length;},0);}
 function bookRead(b){return(readData[b.n]||[]).filter(Boolean).length;}
 
 function updateStats(){
-  const r=totalRead(),p=Math.round(r/1189*100);
+  var r=totalRead(),p=Math.round(r/1189*100);
   document.getElementById('s-read').textContent=r;
   document.getElementById('s-pct').textContent=p+'%';
   document.getElementById('prog-txt').textContent=r+' / 1189 章';
@@ -264,46 +247,107 @@ function updateStats(){
 }
 
 async function saveProgress(){
-  localStorage.setItem(SK,JSON.stringify({name:myName,code:myCode,id:myId,read:readData}));
-  await sb.from('members').upsert({id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()});
+  try{
+    localStorage.setItem(SK,JSON.stringify({name:myName,code:myCode,id:myId,read:readData}));
+    await sb.from('members').upsert({id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()});
+  }catch(e){console.error('保存エラー:',e);}
+}
+
+// DB からメンバーデータを取得（.single()を使わない安全な方法）
+async function fetchMyData(){
+  try{
+    var res=await sb.from('members').select('read_data').eq('id',myId);
+    if(res.error) return null;
+    if(res.data && res.data.length>0) return res.data[0].read_data;
+    return null;
+  }catch(e){
+    return null;
+  }
+}
+
+async function joinOrCreate(){
+  var name=document.getElementById('inp-name').value.trim();
+  var code=document.getElementById('inp-code').value.trim().toUpperCase();
+  if(!name){showAlert('名前を入力してください。');return;}
+  if(code && code.length!==6){showAlert('グループコードは6文字です。');return;}
+  if(!sb){showAlert('接続エラー。ページを再読み込みしてください。');return;}
+  var btn=document.getElementById('join-btn');
+  btn.disabled=true;btn.textContent='処理中...';
+  try{
+    if(code){
+      // 既存グループに参加
+      var gRes=await sb.from('groups').select('code').eq('code',code);
+      if(gRes.error) throw new Error('グループ検索失敗: '+gRes.error.message);
+      if(!gRes.data || gRes.data.length===0){
+        showAlert('グループが見つかりません。コードを確認してください。');
+        btn.disabled=false;btn.textContent='参加 / 新規作成';
+        return;
+      }
+      myCode=code;
+    } else {
+      // 新規グループ作成
+      myCode=makeCode();
+      var cRes=await sb.from('groups').insert([{code:myCode}]);
+      if(cRes.error) throw new Error('グループ作成失敗: '+cRes.error.message);
+    }
+    myName=name;
+    myId=makeStableId(myName, myCode);
+    readData={};
+    initRead();
+    // 既存データがあれば引き継ぐ
+    var existing=await fetchMyData();
+    if(existing) readData=existing;
+    // メンバー登録
+    var uRes=await sb.from('members').upsert([{id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()}]);
+    if(uRes.error) throw new Error('メンバー登録失敗: '+uRes.error.message);
+    localStorage.setItem(SK,JSON.stringify({name:myName,code:myCode,id:myId,read:readData}));
+    enterApp();
+  }catch(e){
+    showAlert('エラー: '+e.message);
+  }
+  btn.disabled=false;btn.textContent='参加 / 新規作成';
 }
 
 function showTab(t){
-  ['my','group','share'].forEach(x=>{
+  ['my','group','share'].forEach(function(x){
     document.getElementById('tab-'+x).classList.toggle('active',x===t);
     document.getElementById('pane-'+x).style.display=x===t?'block':'none';
   });
-  if(t==='group')loadGroup();
+  if(t==='group') loadGroup();
 }
 
 async function loadGroup(){
   document.getElementById('group-loading').style.display='block';
   document.getElementById('group-list').style.display='none';
-  const {data,error}=await sb.from('members').select('id,name,read_data').eq('group_code',myCode);
-  const list=document.getElementById('members-list');
-  list.innerHTML='';
-  if(error||!data||data.length===0){
-    list.innerHTML='<div style="font-size:13px;color:#666;padding:1rem 0;">まだメンバーがいません。グループコードを共有してください。</div>';
-  } else {
-    data.sort((a,b)=>{
-      const ra=Object.values(a.read_data||{}).flat().filter(Boolean).length;
-      const rb=Object.values(b.read_data||{}).flat().filter(Boolean).length;
-      return rb-ra;
-    }).forEach(m=>{
-      const rd=Object.values(m.read_data||{}).flat().filter(Boolean).length;
-      const pct=Math.round(rd/1189*100);
-      const ci=colorIdx(m.name);
-      const row=document.createElement('div');
-      row.className='member-row';
-      row.innerHTML=`
-        <div class="avatar" style="background:${AVATAR_BG[ci]};color:${AVATAR_TX[ci]};">${m.name.slice(0,2)}</div>
-        <div class="member-info">
-          <div class="member-name">${m.name}${m.id===myId?'<span class="you-badge">あなた</span>':''}</div>
-          <div class="member-pct">${rd} / 1189 章（${pct}%）</div>
-          <div style="margin-top:5px;" class="bar-bg bar-sm"><div class="bar-fill bar-sm" style="width:${pct}%"></div></div>
-        </div>`;
-      list.appendChild(row);
-    });
+  try{
+    var res=await sb.from('members').select('id,name,read_data').eq('group_code',myCode);
+    var list=document.getElementById('members-list');
+    list.innerHTML='';
+    if(res.error||!res.data||res.data.length===0){
+      list.innerHTML='<div style="font-size:13px;color:#666;padding:1rem 0;">まだメンバーがいません。グループコードを共有してください。</div>';
+    } else {
+      var members=res.data.slice().sort(function(a,b){
+        var ra=Object.values(a.read_data||{}).reduce(function(s,arr){return s+arr.filter(Boolean).length;},0);
+        var rb=Object.values(b.read_data||{}).reduce(function(s,arr){return s+arr.filter(Boolean).length;},0);
+        return rb-ra;
+      });
+      members.forEach(function(m){
+        var rd=Object.values(m.read_data||{}).reduce(function(s,arr){return s+arr.filter(Boolean).length;},0);
+        var pct=Math.round(rd/1189*100);
+        var ci=colorIdx(m.name);
+        var row=document.createElement('div');
+        row.className='member-row';
+        row.innerHTML='<div class="avatar" style="background:'+AVATAR_BG[ci]+';color:'+AVATAR_TX[ci]+';">'+m.name.slice(0,2)+'</div>'
+          +'<div class="member-info">'
+          +'<div class="member-name">'+m.name+(m.id===myId?'<span class="you-badge">あなた</span>':'')+'</div>'
+          +'<div class="member-pct">'+rd+' / 1189 章（'+pct+'%）</div>'
+          +'<div style="margin-top:5px;" class="bar-bg bar-sm"><div class="bar-fill bar-sm" style="width:'+pct+'%"></div></div>'
+          +'</div>';
+        list.appendChild(row);
+      });
+    }
+  }catch(e){
+    document.getElementById('members-list').innerHTML='<div style="font-size:13px;color:#A32D2D;">読み込みエラー: '+e.message+'</div>';
   }
   document.getElementById('group-loading').style.display='none';
   document.getElementById('group-list').style.display='block';
@@ -311,94 +355,81 @@ async function loadGroup(){
 
 function setBookTab(t){
   bookTab=t;
-  ['all','ot','nt'].forEach(x=>document.getElementById('btab-'+x).classList.toggle('active',x===t));
+  ['all','ot','nt'].forEach(function(x){document.getElementById('btab-'+x).classList.toggle('active',x===t);});
   renderBooks();
 }
 
 function renderBooks(){
-  const q=(document.getElementById('bsearch').value||'').toLowerCase();
-  const grid=document.getElementById('books-grid');
+  var q=(document.getElementById('bsearch').value||'').toLowerCase();
+  var grid=document.getElementById('books-grid');
   grid.innerHTML='';
-  let lastT='';
-  BOOKS.filter(b=>{
-    if(bookTab!=='all'&&b.t!==bookTab)return false;
-    if(q&&!b.n.toLowerCase().includes(q))return false;
+  var lastT='';
+  BOOKS.filter(function(b){
+    if(bookTab!=='all'&&b.t!==bookTab) return false;
+    if(q&&b.n.toLowerCase().indexOf(q)===-1) return false;
     return true;
-  }).forEach(b=>{
+  }).forEach(function(b){
     if(b.t!==lastT&&bookTab==='all'){
-      const lbl=document.createElement('div');
+      var lbl=document.createElement('div');
       lbl.className='section-label';
       lbl.textContent=b.t==='ot'?'旧約聖書':'新約聖書';
       grid.appendChild(lbl);lastT=b.t;
     }
-    const rd=bookRead(b),pct=Math.round(rd/b.c*100);
-    const card=document.createElement('div');
+    var rd=bookRead(b),pct=Math.round(rd/b.c*100);
+    var card=document.createElement('div');
     card.className='book-card'+(rd===b.c?' done':'');
-    card.innerHTML=`<div class="book-name">${b.n}</div><div class="chap-bar-bg"><div class="chap-bar" style="width:${pct}%"></div></div><div class="book-meta">${rd} / ${b.c} 章</div>`;
-    card.onclick=()=>openModal(b);
+    card.innerHTML='<div class="book-name">'+b.n+'</div><div class="chap-bar-bg"><div class="chap-bar" style="width:'+pct+'%"></div></div><div class="book-meta">'+rd+' / '+b.c+' 章</div>';
+    card.onclick=(function(book){return function(){openModal(book);};})(b);
     grid.appendChild(card);
   });
 }
 
-function openModal(b){activeBook=b;document.getElementById('modal-title').textContent=b.n+'（'+b.c+'章）';renderChaps();document.getElementById('modal').classList.add('open');}
+function openModal(b){
+  activeBook=b;
+  document.getElementById('modal-title').textContent=b.n+'（'+b.c+'章）';
+  renderChaps();
+  document.getElementById('modal').classList.add('open');
+}
+
 function renderChaps(){
-  const b=activeBook,g=document.getElementById('chap-grid');
+  var b=activeBook,g=document.getElementById('chap-grid');
   g.innerHTML='';
-  for(let i=1;i<=b.c;i++){
-    const btn=document.createElement('button');
+  for(var i=1;i<=b.c;i++){
+    var btn=document.createElement('button');
     btn.className='chap-btn'+((readData[b.n]||[])[i-1]?' read':'');
     btn.textContent=i;
-    btn.onclick=()=>toggleChap(b,i-1);
+    btn.onclick=(function(book,idx){return function(){toggleChap(book,idx);};})(b,i-1);
     g.appendChild(btn);
   }
 }
+
 async function toggleChap(b,i){
-  if(!readData[b.n])readData[b.n]=new Array(b.c).fill(false);
+  if(!readData[b.n]) readData[b.n]=new Array(b.c).fill(false);
   readData[b.n][i]=!readData[b.n][i];
   updateStats();renderChaps();renderBooks();
   await saveProgress();
 }
-async function markAll(){const b=activeBook;readData[b.n]=new Array(b.c).fill(true);updateStats();renderChaps();renderBooks();await saveProgress();}
-async function markNone(){const b=activeBook;readData[b.n]=new Array(b.c).fill(false);updateStats();renderChaps();renderBooks();await saveProgress();}
-function closeModal(e,force){if(force||e.target===document.getElementById('modal'))document.getElementById('modal').classList.remove('open');}
+
+async function markAll(){
+  var b=activeBook;
+  readData[b.n]=new Array(b.c).fill(true);
+  updateStats();renderChaps();renderBooks();
+  await saveProgress();
+}
+
+async function markNone(){
+  var b=activeBook;
+  readData[b.n]=new Array(b.c).fill(false);
+  updateStats();renderChaps();renderBooks();
+  await saveProgress();
+}
+
+function closeModal(e,force){
+  if(force||(e&&e.target===document.getElementById('modal')))
+    document.getElementById('modal').classList.remove('open');
+}
 
 function copyCode(){
   try{navigator.clipboard.writeText(myCode);}catch(e){}
-  const btn=document.getElementById('copy-btn');
-  btn.textContent='コピーしました！';setTimeout(()=>btn.textContent='コードをコピー',2000);
-}
-
-function logout(){localStorage.removeItem(SK);location.reload();}
-
-function enterApp(){
-  document.getElementById('screen-join').classList.remove('active');
-  document.getElementById('screen-main').classList.add('active');
-  const ci=colorIdx(myName);
-  const av=document.getElementById('top-avatar');
-  av.textContent=myName.slice(0,2);av.style.background=AVATAR_BG[ci];av.style.color=AVATAR_TX[ci];
-  document.getElementById('top-name').textContent=myName;
-  document.getElementById('disp-code').textContent=myCode;
-  updateStats();renderBooks();
-}
-
-// 起動
-initSupabase();
-(async()=>{
-  try{
-    const saved=JSON.parse(localStorage.getItem(SK)||'null');
-    if(saved&&saved.name&&saved.code&&saved.id){
-      myName=saved.name;myCode=saved.code;myId=saved.id;
-      const res=await sb.from('members').select('read_data').eq('id',myId);
-      if(!res.error&&res.data&&res.data.length>0&&res.data[0].read_data){
-        readData=res.data[0].read_data;
-      } else {
-        readData=saved.read||{};
-      }
-      initRead();enterApp();
-    }
-  }catch(e){console.error('起動エラー:',e);}
-})();
-</script>
-
-
-</body></html>
+  var btn=document.getElementById('copy-btn');
+  btn.
