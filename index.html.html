@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>聖書通読トラッカー</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh;}
+.wrap{max-width:720px;margin:0 auto;padding:1.5rem 1rem;}
+.screen{display:none;}
+.screen.active{display:block;}
+.title{font-size:22px;font-weight:500;color:#1a1a1a;margin-bottom:4px;}
+.subtitle{font-size:13px;color:#666;margin-bottom:1.5rem;}
+.card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;padding:1.25rem;margin-bottom:1rem;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem;}
+.stat{background:#f5f5f0;border-radius:8px;padding:.85rem 1rem;}
+.stat-label{font-size:12px;color:#666;margin-bottom:4px;}
+.stat-num{font-size:22px;font-weight:500;color:#1a1a1a;}
+.bar-bg{background:rgba(0,0,0,0.08);border-radius:4px;height:8px;width:100%;overflow:hidden;}
+.bar-fill{height:8px;border-radius:4px;background:#1D9E75;transition:width .4s;}
+.bar-sm{height:5px;border-radius:3px;}
+.controls{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;}
+.seg{display:flex;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;overflow:hidden;}
+.seg button{padding:6px 14px;font-size:13px;background:transparent;border:none;cursor:pointer;color:#666;transition:all .15s;}
+.seg button.active{background:#f5f5f0;color:#1a1a1a;font-weight:500;}
+.search-box input{padding:6px 12px;font-size:13px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#fff;color:#1a1a1a;width:160px;}
+.books-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;max-height:460px;overflow-y:auto;}
+.book-card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:8px;padding:.75rem;cursor:pointer;transition:border-color .15s;}
+.book-card:hover{border-color:rgba(0,0,0,0.25);}
+.book-card.done{border-color:#1D9E75;background:#E1F5EE;}
+.book-name{font-size:13px;font-weight:500;color:#1a1a1a;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.book-card.done .book-name{color:#085041;}
+.book-meta{font-size:11px;color:#999;margin-top:4px;}
+.book-card.done .book-meta{color:#0F6E56;}
+.chap-bar-bg{background:rgba(0,0,0,0.08);border-radius:2px;height:4px;width:100%;overflow:hidden;margin-bottom:4px;}
+.chap-bar{height:4px;border-radius:2px;background:#1D9E75;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:12px;padding:1.25rem;width:min(480px,92vw);max-height:80vh;overflow-y:auto;}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;}
+.modal-title{font-size:16px;font-weight:500;}
+.close-btn{font-size:18px;cursor:pointer;color:#666;background:none;border:none;line-height:1;}
+.chap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;}
+.chap-btn{padding:6px 4px;font-size:12px;border-radius:6px;border:0.5px solid rgba(0,0,0,0.15);background:#fff;color:#666;cursor:pointer;transition:all .1s;text-align:center;}
+.chap-btn.read{background:#1D9E75;border-color:#1D9E75;color:#fff;font-weight:500;}
+.chap-btn:hover{border-color:rgba(0,0,0,0.3);}
+.modal-actions{display:flex;gap:8px;margin-top:1rem;}
+.nav-tabs{display:flex;border-bottom:0.5px solid rgba(0,0,0,0.1);margin-bottom:1.5rem;}
+.nav-tab{padding:8px 20px;font-size:14px;cursor:pointer;background:none;border:none;color:#666;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
+.nav-tab.active{color:#1D9E75;border-bottom-color:#1D9E75;font-weight:500;}
+.member-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid rgba(0,0,0,0.07);}
+.member-row:last-child{border-bottom:none;}
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0;}
+.member-info{flex:1;min-width:0;}
+.member-name{font-size:14px;font-weight:500;}
+.member-pct{font-size:12px;color:#666;margin-top:2px;}
+.you-badge{font-size:10px;padding:2px 6px;background:#E1F5EE;color:#0F6E56;border-radius:10px;margin-left:6px;font-weight:500;}
+.group-code{font-family:monospace;font-size:22px;font-weight:500;letter-spacing:.2em;text-align:center;padding:.85rem;background:#f5f5f0;border-radius:8px;color:#1a1a1a;margin:1rem 0;}
+.btn{padding:8px 20px;font-size:13px;border-radius:8px;cursor:pointer;border:0.5px solid rgba(0,0,0,0.15);background:transparent;color:#1a1a1a;transition:all .15s;}
+.btn:hover{background:#f5f5f0;}
+.btn.primary{background:#1D9E75;border-color:#1D9E75;color:#fff;}
+.btn.primary:hover{background:#0F6E56;}
+.btn.sm{padding:5px 12px;font-size:12px;}
+.input-row{margin-bottom:1rem;}
+.input-row label{display:block;font-size:13px;color:#666;margin-bottom:6px;}
+.input-row input{width:100%;padding:8px 12px;font-size:14px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#fff;color:#1a1a1a;}
+.alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:1rem;}
+.alert.error{background:#FCEBEB;color:#A32D2D;}
+.alert.success{background:#E1F5EE;color:#085041;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:8px;}
+.user-chip{display:flex;align-items:center;gap:8px;font-size:13px;color:#666;}
+.section-label{font-size:11px;font-weight:500;color:#999;letter-spacing:.05em;text-transform:uppercase;margin:1.25rem 0 .5rem;grid-column:1/-1;}
+.loading{text-align:center;padding:2rem;color:#666;font-size:14px;}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(0,0,0,0.1);border-top-color:#1D9E75;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===== 設定画面 ===== -->
+<!-- !! ここを書き換えてください !! -->
+<!-- Supabase の Project URL と anon key を設定 -->
+<script>
+const SUPABASE_URL = 'https://sdjaeqtpovgbsdueixqm.supabase.co';       // 例: https://xxxx.supabase.co
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkamFlcXRwb3ZnYnNkdWVpeHFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4NjMxMTgsImV4cCI6MjA5MzQzOTExOH0.CGgM4Kx85g9YcKB0_c7S-DA0R2Nd9KZOdEs663KEoAg';  // 例: eyJhbGci...
+</script>
+
+<div id="screen-join" class="screen active">
+  <div class="title">聖書通読トラッカー</div>
+  <div class="subtitle">名前とグループコードを入力してスタート</div>
+  <div class="card">
+    <div id="join-alert" style="display:none;" class="alert"></div>
+    <div class="input-row">
+      <label>あなたの名前</label>
+      <input type="text" id="inp-name" placeholder="例：田中 一郎" maxlength="20">
+    </div>
+    <div class="input-row">
+      <label>グループコード（任意）</label>
+      <input type="text" id="inp-code" placeholder="既存グループに参加する場合" maxlength="6" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <button class="btn primary" onclick="joinOrCreate()" id="join-btn">参加 / 新規作成</button>
+    <div style="font-size:12px;color:#999;margin-top:10px;">コードを入力しない場合、新しいグループが作成されます</div>
+  </div>
+</div>
+
+<div id="screen-main" class="screen">
+  <div class="top-bar">
+    <div class="title">聖書通読トラッカー</div>
+    <div class="user-chip">
+      <div id="top-avatar" class="avatar" style="width:28px;height:28px;font-size:11px;"></div>
+      <span id="top-name"></span>
+      <button class="btn sm" onclick="logout()">退出</button>
+    </div>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="tab-my" onclick="showTab('my')">自分の進捗</button>
+    <button class="nav-tab" id="tab-group" onclick="showTab('group')">グループ</button>
+    <button class="nav-tab" id="tab-share" onclick="showTab('share')">共有</button>
+  </div>
+
+  <div id="pane-my">
+    <div class="stats-row">
+      <div class="stat"><div class="stat-label">読了章数</div><div class="stat-num" id="s-read">0</div></div>
+      <div class="stat"><div class="stat-label">総章数</div><div class="stat-num">1189</div></div>
+      <div class="stat"><div class="stat-label">進捗</div><div class="stat-num" id="s-pct">0%</div></div>
+    </div>
+    <div class="card" style="padding:.85rem 1.25rem;margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#666;margin-bottom:8px;">
+        <span>全体進捗</span><span id="prog-txt">0 / 1189 章</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" id="prog-bar" style="width:0%"></div></div>
+    </div>
+    <div class="controls">
+      <div class="seg">
+        <button class="active" id="btab-all" onclick="setBookTab('all')">全て</button>
+        <button id="btab-ot" onclick="setBookTab('ot')">旧約</button>
+        <button id="btab-nt" onclick="setBookTab('nt')">新約</button>
+      </div>
+      <div><input type="text" placeholder="書巻を検索..." id="bsearch" oninput="renderBooks()" style="padding:6px 12px;font-size:13px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#fff;color:#1a1a1a;width:160px;"></div>
+    </div>
+    <div class="books-grid" id="books-grid"></div>
+  </div>
+
+  <div id="pane-group" style="display:none;">
+    <div id="group-loading" class="loading"><span class="spinner"></span>読み込み中...</div>
+    <div id="group-list" style="display:none;">
+      <div class="card">
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;">メンバーの進捗</div>
+        <div id="members-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pane-share" style="display:none;">
+    <div class="card">
+      <div style="font-size:13px;font-weight:500;margin-bottom:6px;">グループコード</div>
+      <div style="font-size:12px;color:#666;margin-bottom:0;">このコードを家族・教会メンバーに送ってください</div>
+      <div class="group-code" id="disp-code">------</div>
+      <button class="btn primary" onclick="copyCode()" id="copy-btn">コードをコピー</button>
+      <div style="font-size:12px;color:#666;margin-top:1rem;">参加する人は最初の画面でこのコードを入力するだけです。</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title"></div>
+      <button class="close-btn" onclick="closeModal(null,true)">✕</button>
+    </div>
+    <div class="chap-grid" id="chap-grid"></div>
+    <div class="modal-actions" style="margin-top:1rem;display:flex;gap:8px;">
+      <button class="btn primary" onclick="markAll()">全章を既読</button>
+      <button class="btn" onclick="markNone()">全章をリセット</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const BOOKS=[
+{n:"創世記",t:"ot",c:50},{n:"出エジプト記",t:"ot",c:40},{n:"レビ記",t:"ot",c:27},{n:"民数記",t:"ot",c:36},{n:"申命記",t:"ot",c:34},
+{n:"ヨシュア記",t:"ot",c:24},{n:"士師記",t:"ot",c:21},{n:"ルツ記",t:"ot",c:4},{n:"サムエル記上",t:"ot",c:31},{n:"サムエル記下",t:"ot",c:24},
+{n:"列王記上",t:"ot",c:22},{n:"列王記下",t:"ot",c:25},{n:"歴代誌上",t:"ot",c:29},{n:"歴代誌下",t:"ot",c:36},{n:"エズラ記",t:"ot",c:10},
+{n:"ネヘミヤ記",t:"ot",c:13},{n:"エステル記",t:"ot",c:10},{n:"ヨブ記",t:"ot",c:42},{n:"詩篇",t:"ot",c:150},{n:"箴言",t:"ot",c:31},
+{n:"伝道の書",t:"ot",c:12},{n:"雅歌",t:"ot",c:8},{n:"イザヤ書",t:"ot",c:66},{n:"エレミヤ書",t:"ot",c:52},{n:"哀歌",t:"ot",c:5},
+{n:"エゼキエル書",t:"ot",c:48},{n:"ダニエル書",t:"ot",c:12},{n:"ホセア書",t:"ot",c:14},{n:"ヨエル書",t:"ot",c:3},{n:"アモス書",t:"ot",c:9},
+{n:"オバデヤ書",t:"ot",c:1},{n:"ヨナ書",t:"ot",c:4},{n:"ミカ書",t:"ot",c:7},{n:"ナホム書",t:"ot",c:3},{n:"ハバクク書",t:"ot",c:3},
+{n:"ゼファニヤ書",t:"ot",c:3},{n:"ハガイ書",t:"ot",c:2},{n:"ゼカリヤ書",t:"ot",c:14},{n:"マラキ書",t:"ot",c:4},
+{n:"マタイ",t:"nt",c:28},{n:"マルコ",t:"nt",c:16},{n:"ルカ",t:"nt",c:24},{n:"ヨハネ",t:"nt",c:21},{n:"使徒の働き",t:"nt",c:28},
+{n:"ローマ",t:"nt",c:16},{n:"コリントI",t:"nt",c:16},{n:"コリントII",t:"nt",c:13},{n:"ガラテヤ",t:"nt",c:6},{n:"エペソ",t:"nt",c:6},
+{n:"ピリピ",t:"nt",c:4},{n:"コロサイ",t:"nt",c:4},{n:"テサロニケI",t:"nt",c:5},{n:"テサロニケII",t:"nt",c:3},{n:"テモテI",t:"nt",c:6},
+{n:"テモテII",t:"nt",c:4},{n:"テトス",t:"nt",c:3},{n:"ピレモン",t:"nt",c:1},{n:"ヘブル",t:"nt",c:13},{n:"ヤコブ",t:"nt",c:5},
+{n:"ペテロI",t:"nt",c:5},{n:"ペテロII",t:"nt",c:3},{n:"ヨハネI",t:"nt",c:5},{n:"ヨハネII",t:"nt",c:1},{n:"ヨハネIII",t:"nt",c:1},
+{n:"ユダ",t:"nt",c:1},{n:"黙示録",t:"nt",c:22}
+];
+
+const AVATAR_BG=['#E1F5EE','#E6F1FB','#FAEEDA','#FBEAF0','#EAF3DE','#EEEDFE'];
+const AVATAR_TX=['#085041','#0C447C','#633806','#72243E','#27500A','#3C3489'];
+
+let sb, myName='', myCode='', myId='', bookTab='all', activeBook=null, readData={};
+const SK='bible_sb_v1';
+
+function initSupabase(){
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
+function makeId(){return crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36);}
+function makeCode(){return Math.random().toString(36).slice(2,8).toUpperCase();}
+function colorIdx(name){let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))%AVATAR_BG.length;return h;}
+
+function showAlert(msg,type){const el=document.getElementById('join-alert');el.textContent=msg;el.className='alert '+(type||'error');el.style.display='block';}
+
+async function joinOrCreate(){
+  const name=document.getElementById('inp-name').value.trim();
+  const code=document.getElementById('inp-code').value.trim().toUpperCase();
+  if(!name){showAlert('名前を入力してください。');return;}
+  if(code&&code.length!==6){showAlert('グループコードは6文字です。');return;}
+  const btn=document.getElementById('join-btn');
+  btn.disabled=true;btn.textContent='処理中...';
+  try{
+    if(code){
+      const {data,error}=await sb.from('groups').select('code').eq('code',code).single();
+      if(error||!data){showAlert('グループが見つかりません。コードを確認してください。');btn.disabled=false;btn.textContent='参加 / 新規作成';return;}
+      myCode=code;
+    } else {
+      myCode=makeCode();
+      await sb.from('groups').insert({code:myCode});
+    }
+    myName=name;myId=makeId();
+    initRead();
+    await sb.from('members').upsert({id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()});
+    localStorage.setItem(SK,JSON.stringify({name:myName,code:myCode,id:myId,read:readData}));
+    enterApp();
+  }catch(e){showAlert('エラーが発生しました: '+e.message);}
+  btn.disabled=false;btn.textContent='参加 / 新規作成';
+}
+
+function initRead(){BOOKS.forEach(b=>{if(!readData[b.n])readData[b.n]=new Array(b.c).fill(false);});}
+function totalRead(){return BOOKS.reduce((a,b)=>a+(readData[b.n]||[]).filter(Boolean).length,0);}
+function bookRead(b){return(readData[b.n]||[]).filter(Boolean).length;}
+
+function updateStats(){
+  const r=totalRead(),p=Math.round(r/1189*100);
+  document.getElementById('s-read').textContent=r;
+  document.getElementById('s-pct').textContent=p+'%';
+  document.getElementById('prog-txt').textContent=r+' / 1189 章';
+  document.getElementById('prog-bar').style.width=p+'%';
+}
+
+async function saveProgress(){
+  localStorage.setItem(SK,JSON.stringify({name:myName,code:myCode,id:myId,read:readData}));
+  await sb.from('members').upsert({id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()});
+}
+
+function showTab(t){
+  ['my','group','share'].forEach(x=>{
+    document.getElementById('tab-'+x).classList.toggle('active',x===t);
+    document.getElementById('pane-'+x).style.display=x===t?'block':'none';
+  });
+  if(t==='group')loadGroup();
+}
+
+async function loadGroup(){
+  document.getElementById('group-loading').style.display='block';
+  document.getElementById('group-list').style.display='none';
+  const {data,error}=await sb.from('members').select('id,name,read_data').eq('group_code',myCode);
+  const list=document.getElementById('members-list');
+  list.innerHTML='';
+  if(error||!data||data.length===0){
+    list.innerHTML='<div style="font-size:13px;color:#666;padding:1rem 0;">まだメンバーがいません。グループコードを共有してください。</div>';
+  } else {
+    data.sort((a,b)=>{
+      const ra=Object.values(a.read_data||{}).flat().filter(Boolean).length;
+      const rb=Object.values(b.read_data||{}).flat().filter(Boolean).length;
+      return rb-ra;
+    }).forEach(m=>{
+      const rd=Object.values(m.read_data||{}).flat().filter(Boolean).length;
+      const pct=Math.round(rd/1189*100);
+      const ci=colorIdx(m.name);
+      const row=document.createElement('div');
+      row.className='member-row';
+      row.innerHTML=`
+        <div class="avatar" style="background:${AVATAR_BG[ci]};color:${AVATAR_TX[ci]};">${m.name.slice(0,2)}</div>
+        <div class="member-info">
+          <div class="member-name">${m.name}${m.id===myId?'<span class="you-badge">あなた</span>':''}</div>
+          <div class="member-pct">${rd} / 1189 章（${pct}%）</div>
+          <div style="margin-top:5px;" class="bar-bg bar-sm"><div class="bar-fill bar-sm" style="width:${pct}%"></div></div>
+        </div>`;
+      list.appendChild(row);
+    });
+  }
+  document.getElementById('group-loading').style.display='none';
+  document.getElementById('group-list').style.display='block';
+}
+
+function setBookTab(t){
+  bookTab=t;
+  ['all','ot','nt'].forEach(x=>document.getElementById('btab-'+x).classList.toggle('active',x===t));
+  renderBooks();
+}
+
+function renderBooks(){
+  const q=(document.getElementById('bsearch').value||'').toLowerCase();
+  const grid=document.getElementById('books-grid');
+  grid.innerHTML='';
+  let lastT='';
+  BOOKS.filter(b=>{
+    if(bookTab!=='all'&&b.t!==bookTab)return false;
+    if(q&&!b.n.toLowerCase().includes(q))return false;
+    return true;
+  }).forEach(b=>{
+    if(b.t!==lastT&&bookTab==='all'){
+      const lbl=document.createElement('div');
+      lbl.className='section-label';
+      lbl.textContent=b.t==='ot'?'旧約聖書':'新約聖書';
+      grid.appendChild(lbl);lastT=b.t;
+    }
+    const rd=bookRead(b),pct=Math.round(rd/b.c*100);
+    const card=document.createElement('div');
+    card.className='book-card'+(rd===b.c?' done':'');
+    card.innerHTML=`<div class="book-name">${b.n}</div><div class="chap-bar-bg"><div class="chap-bar" style="width:${pct}%"></div></div><div class="book-meta">${rd} / ${b.c} 章</div>`;
+    card.onclick=()=>openModal(b);
+    grid.appendChild(card);
+  });
+}
+
+function openModal(b){activeBook=b;document.getElementById('modal-title').textContent=b.n+'（'+b.c+'章）';renderChaps();document.getElementById('modal').classList.add('open');}
+function renderChaps(){
+  const b=activeBook,g=document.getElementById('chap-grid');
+  g.innerHTML='';
+  for(let i=1;i<=b.c;i++){
+    const btn=document.createElement('button');
+    btn.className='chap-btn'+((readData[b.n]||[])[i-1]?' read':'');
+    btn.textContent=i;
+    btn.onclick=()=>toggleChap(b,i-1);
+    g.appendChild(btn);
+  }
+}
+async function toggleChap(b,i){
+  if(!readData[b.n])readData[b.n]=new Array(b.c).fill(false);
+  readData[b.n][i]=!readData[b.n][i];
+  updateStats();renderChaps();renderBooks();
+  await saveProgress();
+}
+async function markAll(){const b=activeBook;readData[b.n]=new Array(b.c).fill(true);updateStats();renderChaps();renderBooks();await saveProgress();}
+async function markNone(){const b=activeBook;readData[b.n]=new Array(b.c).fill(false);updateStats();renderChaps();renderBooks();await saveProgress();}
+function closeModal(e,force){if(force||e.target===document.getElementById('modal'))document.getElementById('modal').classList.remove('open');}
+
+function copyCode(){
+  try{navigator.clipboard.writeText(myCode);}catch(e){}
+  const btn=document.getElementById('copy-btn');
+  btn.textContent='コピーしました！';setTimeout(()=>btn.textContent='コードをコピー',2000);
+}
+
+function logout(){localStorage.removeItem(SK);location.reload();}
+
+function enterApp(){
+  document.getElementById('screen-join').classList.remove('active');
+  document.getElementById('screen-main').classList.add('active');
+  const ci=colorIdx(myName);
+  const av=document.getElementById('top-avatar');
+  av.textContent=myName.slice(0,2);av.style.background=AVATAR_BG[ci];av.style.color=AVATAR_TX[ci];
+  document.getElementById('top-name').textContent=myName;
+  document.getElementById('disp-code').textContent=myCode;
+  updateStats();renderBooks();
+}
+
+// 起動
+initSupabase();
+(async()=>{
+  const saved=JSON.parse(localStorage.getItem(SK)||'null');
+  if(saved&&saved.name&&saved.code&&saved.id){
+    myName=saved.name;myCode=saved.code;myId=saved.id;
+    const {data}=await sb.from('members').select('read_data').eq('id',myId).single();
+    readData=data?.read_data||saved.read||{};
+    initRead();enterApp();
+  }
+})();
+</script>
+</body>
+</html>
