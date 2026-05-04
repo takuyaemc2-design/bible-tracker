@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/takey/Downloads/index_5.html -->
+<!-- saved from url=(0045)file:///C:/Users/takey/Downloads/index_7.html -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>聖書通読トラッカー</title>
-<script src="./聖書通読トラッカー_files/supabase-js@2"></script>
 <style>
+
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh;}
 .wrap{max-width:720px;margin:0 auto;padding:1.5rem 1rem;}
@@ -75,18 +75,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .loading{text-align:center;padding:2rem;color:#666;font-size:14px;}
 .spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(0,0,0,0.1);border-top-color:#1D9E75;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg)}}
+
 </style>
 </head>
 <body>
 <div class="wrap">
-
-<!-- ===== 設定画面 ===== -->
-<!-- !! ここを書き換えてください !! -->
-<!-- Supabase の Project URL と anon key を設定 -->
-<script>
-const SUPABASE_URL = 'https://sdjaeqtpovgbsdueixqm.supabase.co';       // 例: https://xxxx.supabase.co
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkamFlcXRwb3ZnYnNkdWVpeHFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4NjMxMTgsImV4cCI6MjA5MzQzOTExOH0.CGgM4Kx85g9YcKB0_c7S-DA0R2Nd9KZOdEs663KEoAg';  // 例: eyJhbGci...
-</script>
 
 <div id="screen-join" class="screen active">
   <div class="title">聖書通読トラッカー</div>
@@ -101,7 +94,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
       <label>グループコード（任意）</label>
       <input type="text" id="inp-code" placeholder="既存グループに参加する場合" maxlength="6" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
     </div>
-    <button class="btn primary" onclick="joinOrCreate()" id="join-btn">参加 / 新規作成</button>
+    <button class="btn primary" onclick="onJoinClick()" id="join-btn">参加 / 新規作成</button>
     <div style="font-size:12px;color:#999;margin-top:10px;">コードを入力しない場合、新しいグループが作成されます</div>
   </div>
 </div>
@@ -115,13 +108,11 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
       <button class="btn sm" onclick="logout()">退出</button>
     </div>
   </div>
-
   <div class="nav-tabs">
     <button class="nav-tab active" id="tab-my" onclick="showTab(&#39;my&#39;)">自分の進捗</button>
     <button class="nav-tab" id="tab-group" onclick="showTab(&#39;group&#39;)">グループ</button>
     <button class="nav-tab" id="tab-share" onclick="showTab(&#39;share&#39;)">共有</button>
   </div>
-
   <div id="pane-my">
     <div class="stats-row">
       <div class="stat"><div class="stat-label">読了章数</div><div class="stat-num" id="s-read">0</div></div>
@@ -144,7 +135,6 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
     </div>
     <div class="books-grid" id="books-grid"></div>
   </div>
-
   <div id="pane-group" style="display:none;">
     <div id="group-loading" class="loading"><span class="spinner"></span>読み込み中...</div>
     <div id="group-list" style="display:none;">
@@ -154,11 +144,10 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
       </div>
     </div>
   </div>
-
   <div id="pane-share" style="display:none;">
     <div class="card">
       <div style="font-size:13px;font-weight:500;margin-bottom:6px;">グループコード</div>
-      <div style="font-size:12px;color:#666;margin-bottom:0;">このコードを家族・教会メンバーに送ってください</div>
+      <div style="font-size:12px;color:#666;">このコードを家族・教会メンバーに送ってください</div>
       <div class="group-code" id="disp-code">------</div>
       <button class="btn primary" onclick="copyCode()" id="copy-btn">コードをコピー</button>
       <div style="font-size:12px;color:#666;margin-top:1rem;">参加する人は最初の画面でこのコードを入力するだけです。</div>
@@ -166,9 +155,8 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
   </div>
 </div>
 
-</div><!-- /wrap -->
+</div>
 
-<!-- Modal -->
 <div class="modal-overlay" id="modal" onclick="closeModal(event)">
   <div class="modal">
     <div class="modal-head">
@@ -183,8 +171,13 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
   </div>
 </div>
 
+<!-- Supabaseを最後に読み込んで確実にロードされてから初期化する -->
+<script src="./聖書通読トラッカー_files/supabase.js.ダウンロード"></script>
 <script>
-const BOOKS=[
+var SUPABASE_URL =  + SUPABASE_URL + ;
+var SUPABASE_KEY =  + SUPABASE_KEY + ;
+
+var BOOKS=[
 {n:"創世記",t:"ot",c:50},{n:"出エジプト記",t:"ot",c:40},{n:"レビ記",t:"ot",c:27},{n:"民数記",t:"ot",c:36},{n:"申命記",t:"ot",c:34},
 {n:"ヨシュア記",t:"ot",c:24},{n:"士師記",t:"ot",c:21},{n:"ルツ記",t:"ot",c:4},{n:"サムエル記上",t:"ot",c:31},{n:"サムエル記下",t:"ot",c:24},
 {n:"列王記上",t:"ot",c:22},{n:"列王記下",t:"ot",c:25},{n:"歴代誌上",t:"ot",c:29},{n:"歴代誌下",t:"ot",c:36},{n:"エズラ記",t:"ot",c:10},
@@ -201,45 +194,57 @@ const BOOKS=[
 {n:"ユダ",t:"nt",c:1},{n:"黙示録",t:"nt",c:22}
 ];
 
-const AVATAR_BG=['#E1F5EE','#E6F1FB','#FAEEDA','#FBEAF0','#EAF3DE','#EEEDFE'];
-const AVATAR_TX=['#085041','#0C447C','#633806','#72243E','#27500A','#3C3489'];
+var AVATAR_BG=['#E1F5EE','#E6F1FB','#FAEEDA','#FBEAF0','#EAF3DE','#EEEDFE'];
+var AVATAR_TX=['#085041','#0C447C','#633806','#72243E','#27500A','#3C3489'];
+var SK='bible_sb_v3';
+var sb=null, myName='', myCode='', myId='', bookTab='all', activeBook=null, readData={};
 
-let sb=null, myName='', myCode='', myId='', bookTab='all', activeBook=null, readData={};
-const SK='bible_sb_v2';
-
-// Supabase初期化
-function initSupabase(){
-  try{
-    sb=supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  }catch(e){
-    showAlert('Supabase初期化エラー: '+e.message);
-  }
+function makeCode(){
+  return Math.random().toString(36).slice(2,8).toUpperCase();
 }
 
-// 名前+コードから毎回同じIDを生成する
-function makeStableId(name, code){
-  var str=name+'_'+code;
-  var hash=0;
+function makeStableId(name,code){
+  var str=name+'_'+code, hash=0;
   for(var i=0;i<str.length;i++){
     hash=((hash<<5)-hash)+str.charCodeAt(i);
-    hash=hash&hash;
+    hash=hash|0;
   }
-  var h=Math.abs(hash).toString(36);
-  var l=str.length.toString(36);
   var s=0;
   for(var i=0;i<str.length;i++) s+=str.charCodeAt(i);
-  return (h+l+s.toString(36)).slice(0,36);
+  return (Math.abs(hash).toString(36)+'_'+s.toString(36)+'_'+str.length).slice(0,36);
 }
 
-function makeCode(){return Math.random().toString(36).slice(2,8).toUpperCase();}
-function colorIdx(name){var h=0;for(var i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))%AVATAR_BG.length;return h;}
-function showAlert(msg,type){var el=document.getElementById('join-alert');el.textContent=msg;el.className='alert '+(type||'error');el.style.display='block';}
-function initRead(){BOOKS.forEach(function(b){if(!readData[b.n])readData[b.n]=new Array(b.c).fill(false);});}
-function totalRead(){return BOOKS.reduce(function(a,b){return a+(readData[b.n]||[]).filter(Boolean).length;},0);}
-function bookRead(b){return(readData[b.n]||[]).filter(Boolean).length;}
+function colorIdx(name){
+  var h=0;
+  for(var i=0;i<name.length;i++) h=(h*31+name.charCodeAt(i))%6;
+  return h;
+}
+
+function showAlert(msg,type){
+  var el=document.getElementById('join-alert');
+  el.textContent=msg;
+  el.className='alert '+(type||'error');
+  el.style.display='block';
+}
+
+function initRead(){
+  BOOKS.forEach(function(b){
+    if(!readData[b.n]) readData[b.n]=new Array(b.c).fill(false);
+  });
+}
+
+function totalRead(){
+  return BOOKS.reduce(function(a,b){
+    return a+(readData[b.n]||[]).filter(Boolean).length;
+  },0);
+}
+
+function bookRead(b){
+  return (readData[b.n]||[]).filter(Boolean).length;
+}
 
 function updateStats(){
-  var r=totalRead(),p=Math.round(r/1189*100);
+  var r=totalRead(), p=Math.round(r/1189*100);
   document.getElementById('s-read').textContent=r;
   document.getElementById('s-pct').textContent=p+'%';
   document.getElementById('prog-txt').textContent=r+' / 1189 章';
@@ -249,20 +254,24 @@ function updateStats(){
 async function saveProgress(){
   try{
     localStorage.setItem(SK,JSON.stringify({name:myName,code:myCode,id:myId,read:readData}));
-    await sb.from('members').upsert({id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()});
-  }catch(e){console.error('保存エラー:',e);}
+    await sb.from('members').upsert([{id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()}]);
+  }catch(e){ console.error('保存エラー:',e); }
 }
 
-// DB からメンバーデータを取得（.single()を使わない安全な方法）
 async function fetchMyData(){
   try{
     var res=await sb.from('members').select('read_data').eq('id',myId);
-    if(res.error) return null;
-    if(res.data && res.data.length>0) return res.data[0].read_data;
-    return null;
-  }catch(e){
-    return null;
+    if(!res.error && res.data && res.data.length>0) return res.data[0].read_data;
+  }catch(e){}
+  return null;
+}
+
+function onJoinClick(){
+  if(!sb){
+    showAlert('接続中です。少し待ってから再度お試しください。');
+    return;
   }
+  joinOrCreate();
 }
 
 async function joinOrCreate(){
@@ -270,34 +279,29 @@ async function joinOrCreate(){
   var code=document.getElementById('inp-code').value.trim().toUpperCase();
   if(!name){showAlert('名前を入力してください。');return;}
   if(code && code.length!==6){showAlert('グループコードは6文字です。');return;}
-  if(!sb){showAlert('接続エラー。ページを再読み込みしてください。');return;}
   var btn=document.getElementById('join-btn');
-  btn.disabled=true;btn.textContent='処理中...';
+  btn.disabled=true; btn.textContent='処理中...';
   try{
     if(code){
-      // 既存グループに参加
       var gRes=await sb.from('groups').select('code').eq('code',code);
       if(gRes.error) throw new Error('グループ検索失敗: '+gRes.error.message);
-      if(!gRes.data || gRes.data.length===0){
+      if(!gRes.data||gRes.data.length===0){
         showAlert('グループが見つかりません。コードを確認してください。');
-        btn.disabled=false;btn.textContent='参加 / 新規作成';
+        btn.disabled=false; btn.textContent='参加 / 新規作成';
         return;
       }
       myCode=code;
     } else {
-      // 新規グループ作成
       myCode=makeCode();
       var cRes=await sb.from('groups').insert([{code:myCode}]);
       if(cRes.error) throw new Error('グループ作成失敗: '+cRes.error.message);
     }
     myName=name;
-    myId=makeStableId(myName, myCode);
+    myId=makeStableId(myName,myCode);
     readData={};
     initRead();
-    // 既存データがあれば引き継ぐ
     var existing=await fetchMyData();
     if(existing) readData=existing;
-    // メンバー登録
     var uRes=await sb.from('members').upsert([{id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()}]);
     if(uRes.error) throw new Error('メンバー登録失敗: '+uRes.error.message);
     localStorage.setItem(SK,JSON.stringify({name:myName,code:myCode,id:myId,read:readData}));
@@ -305,7 +309,7 @@ async function joinOrCreate(){
   }catch(e){
     showAlert('エラー: '+e.message);
   }
-  btn.disabled=false;btn.textContent='参加 / 新規作成';
+  btn.disabled=false; btn.textContent='参加 / 新規作成';
 }
 
 function showTab(t){
@@ -324,15 +328,14 @@ async function loadGroup(){
     var list=document.getElementById('members-list');
     list.innerHTML='';
     if(res.error||!res.data||res.data.length===0){
-      list.innerHTML='<div style="font-size:13px;color:#666;padding:1rem 0;">まだメンバーがいません。グループコードを共有してください。</div>';
+      list.innerHTML='<div style="font-size:13px;color:#666;padding:1rem 0;">まだメンバーがいません。</div>';
     } else {
-      var members=res.data.slice().sort(function(a,b){
-        var ra=Object.values(a.read_data||{}).reduce(function(s,arr){return s+arr.filter(Boolean).length;},0);
-        var rb=Object.values(b.read_data||{}).reduce(function(s,arr){return s+arr.filter(Boolean).length;},0);
+      res.data.slice().sort(function(a,b){
+        var ra=Object.values(a.read_data||{}).reduce(function(s,v){return s+v.filter(Boolean).length;},0);
+        var rb=Object.values(b.read_data||{}).reduce(function(s,v){return s+v.filter(Boolean).length;},0);
         return rb-ra;
-      });
-      members.forEach(function(m){
-        var rd=Object.values(m.read_data||{}).reduce(function(s,arr){return s+arr.filter(Boolean).length;},0);
+      }).forEach(function(m){
+        var rd=Object.values(m.read_data||{}).reduce(function(s,v){return s+v.filter(Boolean).length;},0);
         var pct=Math.round(rd/1189*100);
         var ci=colorIdx(m.name);
         var row=document.createElement('div');
@@ -347,7 +350,7 @@ async function loadGroup(){
       });
     }
   }catch(e){
-    document.getElementById('members-list').innerHTML='<div style="font-size:13px;color:#A32D2D;">読み込みエラー: '+e.message+'</div>';
+    document.getElementById('members-list').innerHTML='<div style="color:#A32D2D;font-size:13px;">エラー: '+e.message+'</div>';
   }
   document.getElementById('group-loading').style.display='none';
   document.getElementById('group-list').style.display='block';
@@ -366,20 +369,22 @@ function renderBooks(){
   var lastT='';
   BOOKS.filter(function(b){
     if(bookTab!=='all'&&b.t!==bookTab) return false;
-    if(q&&b.n.toLowerCase().indexOf(q)===-1) return false;
+    if(q&&b.n.indexOf(q)===-1) return false;
     return true;
   }).forEach(function(b){
     if(b.t!==lastT&&bookTab==='all'){
       var lbl=document.createElement('div');
       lbl.className='section-label';
       lbl.textContent=b.t==='ot'?'旧約聖書':'新約聖書';
-      grid.appendChild(lbl);lastT=b.t;
+      grid.appendChild(lbl); lastT=b.t;
     }
-    var rd=bookRead(b),pct=Math.round(rd/b.c*100);
+    var rd=bookRead(b), pct=Math.round(rd/b.c*100);
     var card=document.createElement('div');
     card.className='book-card'+(rd===b.c?' done':'');
-    card.innerHTML='<div class="book-name">'+b.n+'</div><div class="chap-bar-bg"><div class="chap-bar" style="width:'+pct+'%"></div></div><div class="book-meta">'+rd+' / '+b.c+' 章</div>';
-    card.onclick=(function(book){return function(){openModal(book);};})(b);
+    card.innerHTML='<div class="book-name">'+b.n+'</div>'
+      +'<div class="chap-bar-bg"><div class="chap-bar" style="width:'+pct+'%"></div></div>'
+      +'<div class="book-meta">'+rd+' / '+b.c+' 章</div>';
+    card.onclick=(function(bk){return function(){openModal(bk);};})(b);
     grid.appendChild(card);
   });
 }
@@ -392,13 +397,13 @@ function openModal(b){
 }
 
 function renderChaps(){
-  var b=activeBook,g=document.getElementById('chap-grid');
+  var b=activeBook, g=document.getElementById('chap-grid');
   g.innerHTML='';
   for(var i=1;i<=b.c;i++){
     var btn=document.createElement('button');
     btn.className='chap-btn'+((readData[b.n]||[])[i-1]?' read':'');
     btn.textContent=i;
-    btn.onclick=(function(book,idx){return function(){toggleChap(book,idx);};})(b,i-1);
+    btn.onclick=(function(bk,idx){return function(){toggleChap(bk,idx);};})(b,i-1);
     g.appendChild(btn);
   }
 }
@@ -406,21 +411,21 @@ function renderChaps(){
 async function toggleChap(b,i){
   if(!readData[b.n]) readData[b.n]=new Array(b.c).fill(false);
   readData[b.n][i]=!readData[b.n][i];
-  updateStats();renderChaps();renderBooks();
+  updateStats(); renderChaps(); renderBooks();
   await saveProgress();
 }
 
 async function markAll(){
   var b=activeBook;
   readData[b.n]=new Array(b.c).fill(true);
-  updateStats();renderChaps();renderBooks();
+  updateStats(); renderChaps(); renderBooks();
   await saveProgress();
 }
 
 async function markNone(){
   var b=activeBook;
   readData[b.n]=new Array(b.c).fill(false);
-  updateStats();renderChaps();renderBooks();
+  updateStats(); renderChaps(); renderBooks();
   await saveProgress();
 }
 
@@ -430,6 +435,53 @@ function closeModal(e,force){
 }
 
 function copyCode(){
-  try{navigator.clipboard.writeText(myCode);}catch(e){}
+  try{ navigator.clipboard.writeText(myCode); }catch(e){}
   var btn=document.getElementById('copy-btn');
-  btn.
+  btn.textContent='コピーしました！';
+  setTimeout(function(){btn.textContent='コードをコピー';},2000);
+}
+
+function logout(){ localStorage.removeItem(SK); location.reload(); }
+
+function enterApp(){
+  document.getElementById('screen-join').classList.remove('active');
+  document.getElementById('screen-main').classList.add('active');
+  var ci=colorIdx(myName), av=document.getElementById('top-avatar');
+  av.textContent=myName.slice(0,2);
+  av.style.background=AVATAR_BG[ci];
+  av.style.color=AVATAR_TX[ci];
+  document.getElementById('top-name').textContent=myName;
+  document.getElementById('disp-code').textContent=myCode;
+  updateStats(); renderBooks();
+}
+
+// Supabaseライブラリのロード完了後に初期化
+window.addEventListener('load', function(){
+  try{
+    sb=supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }catch(e){
+    alert('Supabase接続エラー: '+e.message);
+    return;
+  }
+  // ローカルストレージから前回のセッションを復元
+  try{
+    var savedStr=localStorage.getItem(SK);
+    if(!savedStr) return;
+    var saved=JSON.parse(savedStr);
+    if(!saved||!saved.name||!saved.code||!saved.id) return;
+    myName=saved.name; myCode=saved.code; myId=saved.id;
+    readData=saved.read||{};
+    initRead();
+    enterApp();
+    // バックグラウンドでDBから最新データを取得
+    fetchMyData().then(function(dbData){
+      if(dbData){ readData=dbData; initRead(); updateStats(); renderBooks(); }
+    });
+  }catch(e){
+    console.error('復元エラー:',e);
+    localStorage.removeItem(SK);
+  }
+});
+</script>
+
+</body></html>
