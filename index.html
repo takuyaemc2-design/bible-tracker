@@ -147,7 +147,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 <!-- Supabaseを読み込んでからinitApp()を呼ぶ -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="initApp()" onerror="document.getElementById('join-alert').textContent='ライブラリ読み込み失敗。ネット接続を確認してください。';document.getElementById('join-alert').style.display='block';"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 
 var SUPABASE_URL = "https://sdjaeqtpovgbsdueixqm.supabase.co";
@@ -296,6 +296,7 @@ function initApp(){
   }catch(e){localStorage.removeItem(SK);}
 }
 
+initApp();
 </script>
 </body>
 </html>
