@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/takey/Downloads/index_2.html -->
+<!-- saved from url=(0045)file:///C:/Users/takey/Downloads/index_3.html -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -218,32 +218,37 @@ function colorIdx(name){let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charC
 function showAlert(msg,type){const el=document.getElementById('join-alert');el.textContent=msg;el.className='alert '+(type||'error');el.style.display='block';}
 
 async function joinOrCreate(){
-  const name=document.getElementById('inp-name').value.trim();
-  const code=document.getElementById('inp-code').value.trim().toUpperCase();
-  if(!name){showAlert('名前を入力してください。');return;}
-  if(code&&code.length!==6){showAlert('グループコードは6文字です。');return;}
-  const btn=document.getElementById('join-btn');
-  btn.disabled=true;btn.textContent='処理中...';
+  const name=document.getElementById("inp-name").value.trim();
+  const code=document.getElementById("inp-code").value.trim().toUpperCase();
+  if(!name){showAlert("名前を入力してください。");return;}
+  if(code&&code.length!==6){showAlert("グループコードは6文字です。");return;}
+  const btn=document.getElementById("join-btn");
+  btn.disabled=true;btn.textContent="処理中...";
   try{
     if(code){
-      const {data,error}=await sb.from('groups').select('code').eq('code',code).single();
-      if(error||!data){showAlert('グループが見つかりません。コードを確認してください。');btn.disabled=false;btn.textContent='参加 / 新規作成';return;}
+      const res=await sb.from("groups").select("code").eq("code",code);
+      if(res.error)throw new Error("グループ検索エラー: "+res.error.message);
+      if(!res.data||res.data.length===0){showAlert("グループが見つかりません。コードを確認してください。");btn.disabled=false;btn.textContent="参加 / 新規作成";return;}
       myCode=code;
     } else {
       myCode=makeCode();
-      await sb.from('groups').insert({code:myCode});
+      const res=await sb.from("groups").insert({code:myCode});
+      if(res.error)throw new Error("グループ作成エラー: "+res.error.message);
     }
     myName=name;
-    myId=btoa(unescape(encodeURIComponent(myName+'_'+myCode))).replace(/[^a-zA-Z0-9]/g,'').slice(0,36);
+    myId=btoa(unescape(encodeURIComponent(myName+"_"+myCode))).replace(/[^a-zA-Z0-9]/g,"").slice(0,36);
+    readData={};
     initRead();
-    // 既存データがあれば引き継ぐ
-    const {data:existing}=await sb.from('members').select('read_data').eq('id',myId).single();
-    if(existing?.read_data)readData=existing.read_data;
-    await sb.from('members').upsert({id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()});
+    const existing=await sb.from("members").select("read_data").eq("id",myId);
+    if(!existing.error&&existing.data&&existing.data.length>0&&existing.data[0].read_data){
+      readData=existing.data[0].read_data;
+    }
+    const upsertRes=await sb.from("members").upsert({id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()});
+    if(upsertRes.error)throw new Error("メンバー保存エラー: "+upsertRes.error.message);
     localStorage.setItem(SK,JSON.stringify({name:myName,code:myCode,id:myId,read:readData}));
     enterApp();
-  }catch(e){showAlert('エラーが発生しました: '+e.message);}
-  btn.disabled=false;btn.textContent='参加 / 新規作成';
+  }catch(e){showAlert("エラー: "+e.message);}
+  btn.disabled=false;btn.textContent="参加 / 新規作成";
 }
 
 function initRead(){BOOKS.forEach(b=>{if(!readData[b.n])readData[b.n]=new Array(b.c).fill(false);});}
@@ -364,7 +369,6 @@ function copyCode(){
 }
 
 function logout(){localStorage.removeItem(SK);location.reload();}
-// ※退出後も同じ名前+コードで入ると同じデータに戻れます
 
 function enterApp(){
   document.getElementById('screen-join').classList.remove('active');
