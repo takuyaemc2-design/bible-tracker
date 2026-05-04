@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0045)file:///C:/Users/takey/Downloads/index_2.html -->
+<html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>聖書通読トラッカー</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./聖書通読トラッカー_files/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh;}
@@ -117,9 +117,9 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
   </div>
 
   <div class="nav-tabs">
-    <button class="nav-tab active" id="tab-my" onclick="showTab('my')">自分の進捗</button>
-    <button class="nav-tab" id="tab-group" onclick="showTab('group')">グループ</button>
-    <button class="nav-tab" id="tab-share" onclick="showTab('share')">共有</button>
+    <button class="nav-tab active" id="tab-my" onclick="showTab(&#39;my&#39;)">自分の進捗</button>
+    <button class="nav-tab" id="tab-group" onclick="showTab(&#39;group&#39;)">グループ</button>
+    <button class="nav-tab" id="tab-share" onclick="showTab(&#39;share&#39;)">共有</button>
   </div>
 
   <div id="pane-my">
@@ -136,9 +136,9 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
     </div>
     <div class="controls">
       <div class="seg">
-        <button class="active" id="btab-all" onclick="setBookTab('all')">全て</button>
-        <button id="btab-ot" onclick="setBookTab('ot')">旧約</button>
-        <button id="btab-nt" onclick="setBookTab('nt')">新約</button>
+        <button class="active" id="btab-all" onclick="setBookTab(&#39;all&#39;)">全て</button>
+        <button id="btab-ot" onclick="setBookTab(&#39;ot&#39;)">旧約</button>
+        <button id="btab-nt" onclick="setBookTab(&#39;nt&#39;)">新約</button>
       </div>
       <div><input type="text" placeholder="書巻を検索..." id="bsearch" oninput="renderBooks()" style="padding:6px 12px;font-size:13px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#fff;color:#1a1a1a;width:160px;"></div>
     </div>
@@ -233,8 +233,12 @@ async function joinOrCreate(){
       myCode=makeCode();
       await sb.from('groups').insert({code:myCode});
     }
-    myName=name;myId=makeId();
+    myName=name;
+    myId=btoa(unescape(encodeURIComponent(myName+'_'+myCode))).replace(/[^a-zA-Z0-9]/g,'').slice(0,36);
     initRead();
+    // 既存データがあれば引き継ぐ
+    const {data:existing}=await sb.from('members').select('read_data').eq('id',myId).single();
+    if(existing?.read_data)readData=existing.read_data;
     await sb.from('members').upsert({id:myId,group_code:myCode,name:myName,read_data:readData,updated_at:new Date().toISOString()});
     localStorage.setItem(SK,JSON.stringify({name:myName,code:myCode,id:myId,read:readData}));
     enterApp();
@@ -360,6 +364,7 @@ function copyCode(){
 }
 
 function logout(){localStorage.removeItem(SK);location.reload();}
+// ※退出後も同じ名前+コードで入ると同じデータに戻れます
 
 function enterApp(){
   document.getElementById('screen-join').classList.remove('active');
@@ -384,5 +389,6 @@ initSupabase();
   }
 })();
 </script>
-</body>
-</html>
+
+
+</body></html>
